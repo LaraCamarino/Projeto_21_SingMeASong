@@ -1,5 +1,9 @@
 import { faker } from "@faker-js/faker";
 
+beforeEach(async () => {
+  await cy.request("POST", "http://localhost:5000/e2e/reset", {});
+});
+
 describe("Test create a new recommendation", () => {
   it("Should create a new recommendation", () => {
     const newRecommendation = {
