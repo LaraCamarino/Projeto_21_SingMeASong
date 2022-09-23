@@ -4,7 +4,7 @@ beforeEach(async () => {
 
 describe("Test downvote a recommendation", () => {
     it("Should downvote a recommendation and show updated number os votes", () => {
-        cy.createRecommendation();
+        cy.createRecommendation(1);
 
         cy.visit("http://localhost:3000/");
 
