@@ -1,10 +1,7 @@
 import supertest from "supertest";
-import { faker } from "@faker-js/faker";
-
 import { prisma } from "../../src/database";
 import app from "../../src/app";
 import * as recommendationFactory from "../factories/recommendationFactory";
-import { array } from "joi";
 
 beforeEach(async () => {
     await prisma.$executeRaw`TRUNCATE TABLE "recommendations"`;
@@ -125,7 +122,7 @@ describe("Test POST /recommendations/:id/downvote", () => {
 
 describe("Test GET /recommendations", () => {
     it("Should return array with the last 10 recommendations and statusCode 200", async () => {
-        const number = Math.floor(Math.random()*15);
+        const number = Math.floor(Math.random() * 15);
 
         for (let i = 0; i < number; i++) {
             const newRecommendation = recommendationFactory.createNewRecommendation();
@@ -151,7 +148,7 @@ describe("Test GET /recommendations/:id", () => {
         });
 
         const result = await supertest(app).get(`/recommendations/${createdRecommendation.id}`);
-        
+
         expect(result.status).toEqual(200);
         expect(result.body).toBeInstanceOf(Object);
         expect(result.body).toEqual(createdRecommendation);
@@ -163,7 +160,47 @@ describe("Test GET /recommendations/:id", () => {
         const result = await supertest(app).get(`/recommendations/${invalidId}`);
         expect(result.status).toEqual(404);
     });
-}); 
+});
+
+describe("Test GET /recommendations/random", () => {
+    it("Should return a random recommendation and statusCode 200", async () => {
+        const newRecommendation = recommendationFactory.createNewRecommendation();
+
+        await supertest(app).post("/recommendations").send(newRecommendation);
+
+        const result = await supertest(app).get("/recommendations/random");
+        expect(result.status).toEqual(200);
+        expect(result.body).toBeInstanceOf(Object);
+    });
+
+    it("If there are no recommendations, should return statusCode 404", async () => {
+        const result = await supertest(app).get("/recommendations/random");
+        expect(result.status).toEqual(404);
+    });
+});
+
+describe("Test GET /recommendations/top/:amount", () => {
+    it("Should return an array with the top X recommendations and statusCode 200, X being the amount provided by the user", async () => {
+        const amount = Math.floor(Math.random()*10);
+
+        for (let i = 0; i < 10; i++) {
+            const newRecommendation = recommendationFactory.createNewRecommendation();
+
+            await supertest(app).post("/recommendations").send(newRecommendation);
+        }
+
+        const recommendationsByScore = await prisma.recommendation.findMany({
+            orderBy: { score: "desc" },
+            take: amount
+        });
+
+        const result = await supertest(app).get(`/recommendations/top/${amount}`);
+        expect(result.status).toEqual(200);
+        expect(result.body).toBeInstanceOf(Array);
+        expect(result.body.length).toEqual(amount);
+        expect(result.body).toEqual(recommendationsByScore);
+    });
+});
 
 afterAll(async () => {
     await prisma.$disconnect();
