@@ -8,7 +8,7 @@
     "build": "tsc && npx prisma migrate deploy",
     "start": "node dist/src/server.js",
     "dev": "dotenv -e .env.test nodemon src/server.ts",
-    "test": "dotenv -e .env.test prisma migrate dev && dotenv -e .env.test jest --no-cache"
+    "test:integration": "dotenv -e .env.test prisma migrate dev && dotenv -e .env.test jest --no-cache --testPathPattern=tests/integration"
   },
   "keywords": [],
   "author": "",
@@ -33,7 +33,7 @@
     "typescript": "^4.6.4"
   },
   "dependencies": {
-    "@prisma/client": "^3.13.0",
+    "@prisma/client": "^4.3.1",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "express": "^4.17.1",
