@@ -4,6 +4,7 @@ import { faker } from "@faker-js/faker";
 import { prisma } from "../../src/database";
 import app from "../../src/app";
 import * as recommendationFactory from "../factories/recommendationFactory";
+import { array } from "joi";
 
 beforeEach(async () => {
     await prisma.$executeRaw`TRUNCATE TABLE "recommendations"`;
@@ -93,8 +94,8 @@ describe("Test POST /recommendations/:id/downvote", () => {
     });
 
     it("If the recommendation ID is invalid, should return statusCode 404", async () => {
-       const invalidId = 0;
-        
+        const invalidId = 0;
+
         const result = await supertest(app).post(`/recommendations/${invalidId}/downvote`);
         expect(result.status).toEqual(404);
     });
@@ -111,7 +112,7 @@ describe("Test POST /recommendations/:id/downvote", () => {
         expect(createdRecommendation).not.toBeNull();
 
         //Downvote recommendation more than 5 times
-        for(let i = 0; i < 6; i++) {
+        for (let i = 0; i < 6; i++) {
             await supertest(app).post(`/recommendations/${createdRecommendation.id}/downvote`);
         }
 
@@ -121,6 +122,48 @@ describe("Test POST /recommendations/:id/downvote", () => {
         expect(downvotedRecommendation).toBeNull();
     });
 });
+
+describe("Test GET /recommendations", () => {
+    it("Should return array with the last 10 recommendations and statusCode 200", async () => {
+        const number = Math.floor(Math.random()*15);
+
+        for (let i = 0; i < number; i++) {
+            const newRecommendation = recommendationFactory.createNewRecommendation();
+
+            await supertest(app).post("/recommendations").send(newRecommendation);
+        }
+
+        const result = await supertest(app).get("/recommendations");
+        expect(result.status).toEqual(200);
+        expect(result.body).toBeInstanceOf(Array);
+        expect(result.body.length).toBeLessThanOrEqual(10);
+    });
+});
+
+describe("Test GET /recommendations/:id", () => {
+    it("Should return the recommendation which corresponds the given ID and statusCode 200", async () => {
+        const newRecommendation = recommendationFactory.createNewRecommendation();
+
+        await supertest(app).post("/recommendations").send(newRecommendation);
+
+        const createdRecommendation = await prisma.recommendation.findUnique({
+            where: { name: newRecommendation.name }
+        });
+
+        const result = await supertest(app).get(`/recommendations/${createdRecommendation.id}`);
+        
+        expect(result.status).toEqual(200);
+        expect(result.body).toBeInstanceOf(Object);
+        expect(result.body).toEqual(createdRecommendation);
+    });
+
+    it("If the recommendation ID is invalid, should return statusCode 404", async () => {
+        const invalidId = 0;
+
+        const result = await supertest(app).get(`/recommendations/${invalidId}`);
+        expect(result.status).toEqual(404);
+    });
+}); 
 
 afterAll(async () => {
     await prisma.$disconnect();
